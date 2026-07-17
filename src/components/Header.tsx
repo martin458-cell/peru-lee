@@ -8,15 +8,15 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 relative z-10">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/15 text-[#f5f5f0] border border-white/10 mb-3 tracking-wide">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#e1e1d8] animate-pulse"></span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/15 text-white border border-white/10 mb-3 tracking-wide">
+              <span className="w-1.5 h-1.5 rounded-full bg-natural-accent animate-pulse"></span>
               Bases Oficiales, Calificaciones y Generador del Expediente EPL 2026
             </span>
             <h1 className="text-3xl sm:text-4xl font-serif font-bold tracking-tight">
-              Plataforma El Perú Lee <span className="italic font-normal text-[#e1e1d8]">2026</span>
+              Plataforma El Perú Lee <span className="italic font-normal text-natural-accent">2026</span>
             </h1>
-            <p className="mt-2 text-sm text-[#dcdcd0] max-w-2xl font-light leading-relaxed">
-              Guía pedagógica interactiva, calculadora de rúbricas ponderadas, generador de Ficha de Inscripción (Anexo F1) para EBR y base de datos de expedientes registrados bajo el diseño de tonos naturales.
+            <p className="mt-2 text-sm text-slate-200 max-w-2xl font-light leading-relaxed">
+              Guía pedagógica interactiva, calculadora de rúbricas ponderadas, generador de Ficha de Inscripción (Anexo F1) para EBR y base de datos de expedientes, diseñada con los colores institucionales de la I.E.P.M. N° 24009 "Túpac Amaru II" (Rojo, Blanco, Dorado y Azul Marino).
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-sm">

@@ -730,7 +730,7 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
             <button 
               type="button"
               onClick={downloadWordDocument}
-              className="py-3 px-4 bg-natural-secondary hover:bg-[#808074] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow"
+              className="py-3 px-4 bg-natural-secondary hover:bg-[#a00000] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow"
             >
               <Download className="w-4 h-4" />
               <span>Generar Word (.doc)</span>

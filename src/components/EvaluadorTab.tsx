@@ -56,28 +56,28 @@ export default function EvaluadorTab({ onShowToast, onRefreshHistory }: Evaluado
 
   // Determine Level badge
   let level = 'EN INICIO';
-  let badgeClass = 'bg-[#a3a398] text-[#2d2d2a]';
+  let badgeClass = 'bg-natural-secondary/15 text-natural-secondary border border-natural-secondary/20';
   let levelTitle = 'En Inicio';
-  let levelTitleClass = 'text-amber-200/90 font-serif font-bold';
+  let levelTitleClass = 'text-natural-secondary font-serif font-bold';
   let levelDesc = 'El estudiante o equipo muestra dificultades muy significativas para estructurar ideas, ubicar datos explícitos del texto o justificar argumentalmente sus sugerencias lectoras.';
 
   if (finalScorePercent >= 90) {
     level = 'LOGRO DESTACADO';
-    badgeClass = 'bg-[#5A5A40] text-white';
+    badgeClass = 'bg-natural-accent text-white';
     levelTitle = 'Logro Destacado';
-    levelTitleClass = 'text-[#e1e1d8] font-serif font-bold';
+    levelTitleClass = 'text-natural-accent font-serif font-bold';
     levelDesc = 'Desempeño descollante y sobresaliente. Deconstruye con facilidad textos complejos, evalúa falacias, paradojas e integra de forma intertextual e interdisciplinar de manera impecable.';
   } else if (finalScorePercent >= 75) {
     level = 'LOGRO ESPERADO';
-    badgeClass = 'bg-[#8a8a7e] text-white';
+    badgeClass = 'bg-natural-primary text-white';
     levelTitle = 'Logro Esperado';
-    levelTitleClass = 'text-[#e1e1d8] font-serif font-bold';
+    levelTitleClass = 'text-natural-primary font-serif font-bold';
     levelDesc = 'El estudiante o equipo evidencia las competencias pedagógicas mínimas del CNEB. Identifica propósitos narrativos con soltura, sintetiza de forma lógica y recomienda estructurando juicios sólidos.';
   } else if (finalScorePercent >= 45) {
     level = 'EN PROCESO';
-    badgeClass = 'bg-[#a3a398]/50 text-[#2d2d2a]';
+    badgeClass = 'bg-blue-50 text-natural-primary border border-blue-200';
     levelTitle = 'En Proceso';
-    levelTitleClass = 'text-[#a3a398] font-serif font-bold';
+    levelTitleClass = 'text-blue-800 font-serif font-bold';
     levelDesc = 'El estudiante o equipo está muy próximo a lograr el estándar de competencia pero requiere acompañamiento mediado para deducir sentidos figurados de las palabras o cruzar analogías intertextuales.';
   }
 

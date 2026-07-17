@@ -87,13 +87,13 @@ export default function HistorialTab({
   const getLevelBadgeClass = (lvl: string) => {
     switch (lvl) {
       case 'LOGRO DESTACADO':
-        return 'bg-[#5A5A40]/10 text-[#5A5A40] border-[#5A5A40]/20';
+        return 'bg-amber-50 text-[#cf9e2e] border-amber-200';
       case 'LOGRO ESPERADO':
-        return 'bg-[#8a8a7e]/15 text-[#8a8a7e] border-[#8a8a7e]/25';
+        return 'bg-blue-50 text-[#0b1b3d] border-blue-200';
       case 'EN PROCESO':
-        return 'bg-[#a3a398]/20 text-natural-text border-[#a3a398]/30';
+        return 'bg-red-50 text-[#c00000] border-red-100';
       default:
-        return 'bg-red-50 text-red-850 border-red-100';
+        return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
 
