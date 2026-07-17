@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-natural-bg: #f5f5f0;
+  --color-natural-text: #2d2d2a;
+  --color-natural-border: #e1e1d8;
+  --color-natural-primary: #5A5A40;
+  --color-natural-primary-hover: #4a4a35;
+  --color-natural-secondary: #8a8a7e;
+  --color-natural-accent: #a3a398;
+  --color-natural-card: #ffffff;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-natural-bg);
+  color: var(--color-natural-text);
+}
+
+.a4-page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 15mm;
+  margin: 0 auto;
+  background: white;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  line-height: 1.25;
+  color: #1e293b;
+}
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .a4-page {
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 10mm !important;
+    width: 100% !important;
+    min-height: auto !important;
+  }
+}
+

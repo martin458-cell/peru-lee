@@ -1,0 +1,6 @@
+{
+  "name": "Plataforma El Perú Lee",
+  "description": "Guía interactiva, calculadora de rúbricas ponderadas y generador con persistencia en base de datos de la Ficha de Inscripción (Anexo F1) para EBR del concurso El Perú Lee.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
