@@ -120,21 +120,37 @@ export default function EvaluadorTab({ onShowToast, onRefreshHistory }: Evaluado
       return;
     }
 
+    const evalId = "ev-" + Date.now();
+    const newEvalRecord = {
+      id: evalId,
+      studentName,
+      category,
+      scores,
+      desafioScores: data.needsDesafio ? desafioScores : [],
+      totalProductRaw,
+      maxProductRaw,
+      finalScorePercent: parseFloat(finalScorePercent.toFixed(2)),
+      level,
+      createdAt: new Date().toISOString()
+    };
+
+    // 1. Dual Persistence: Save to local storage first
+    try {
+      const localEvalsRaw = localStorage.getItem('local_evaluations');
+      let localEvals = localEvalsRaw ? JSON.parse(localEvalsRaw) : [];
+      localEvals.unshift(newEvalRecord);
+      localStorage.setItem('local_evaluations', JSON.stringify(localEvals));
+    } catch (e) {
+      console.error("Local storage error:", e);
+    }
+
     setIsSaving(true);
     try {
+      // 2. Dual Persistence: Try to save/sync with server
       const response = await fetch('/api/evaluations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentName,
-          category,
-          scores,
-          desafioScores: data.needsDesafio ? desafioScores : [],
-          totalProductRaw,
-          maxProductRaw,
-          finalScorePercent: parseFloat(finalScorePercent.toFixed(2)),
-          level
-        })
+        body: JSON.stringify(newEvalRecord)
       });
 
       if (response.ok) {
@@ -142,11 +158,15 @@ export default function EvaluadorTab({ onShowToast, onRefreshHistory }: Evaluado
         setStudentName('');
         onRefreshHistory();
       } else {
-        onShowToast("Ocurrió un error al guardar en la base de datos.");
+        onShowToast("Evaluación guardada localmente de forma segura (Sincronización diferida).");
+        setStudentName('');
+        onRefreshHistory();
       }
     } catch (e) {
       console.error(e);
-      onShowToast("Falla de conexión al servidor.");
+      onShowToast("Evaluación guardada localmente (Servidor temporalmente desconectado).");
+      setStudentName('');
+      onRefreshHistory();
     } finally {
       setIsSaving(false);
     }

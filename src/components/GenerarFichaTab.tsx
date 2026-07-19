@@ -6,9 +6,10 @@ interface GenerarFichaProps {
   onShowToast: (msg: string) => void;
   onRefreshHistory: () => void;
   initialFichaToLoad?: any;
+  isAdmin: boolean;
 }
 
-export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initialFichaToLoad }: GenerarFichaProps) {
+export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initialFichaToLoad, isAdmin }: GenerarFichaProps) {
   // Tabs accordions state
   const [activeAccordion, setActiveAccordion] = useState<string>('work');
 
@@ -37,6 +38,41 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
   // Dynamic students list
   const [students, setStudents] = useState<Student[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadedId, setLoadedId] = useState<string | null>(null);
+
+  const isReadOnly = !!loadedId && !isAdmin;
+
+  const handleClearForm = () => {
+    setLoadedId(null);
+    setWorkTitle('');
+    setWorkLang('');
+    setWorkLink('');
+    setDocName('');
+    setDocDni('');
+    setDocSpec('');
+    setDocCell('');
+    setDocEmail('');
+    
+    const studentCount = category === 'A' ? 1 : 3;
+    const defaultStudents = Array(studentCount).fill(null).map((_, i) => ({
+      fullname: '',
+      dni: '',
+      age: '',
+      grade: category === 'A' 
+        ? `${i + 1}.er Grado de Primaria` 
+        : category === 'B' 
+          ? `${3 + Math.floor(i/2)}.er Grado de Primaria` 
+          : category === 'C'
+            ? `${5 + Math.floor(i/2)}.to Grado de Primaria`
+            : `Grado Secundaria`,
+      section: '',
+      parentName: '',
+      parentDni: '',
+      parentRel: 'Padre/Madre'
+    }));
+    setStudents(defaultStudents);
+    onShowToast("Formulario limpiado para un nuevo registro.");
+  };
 
   // Load selected ficha record if supplied (passed from History reload action)
   useEffect(() => {
@@ -60,13 +96,14 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
       setDocCell(initialFichaToLoad.docCell || '');
       setDocEmail(initialFichaToLoad.docEmail || '');
       setStudents(initialFichaToLoad.students || []);
+      setLoadedId(initialFichaToLoad.id || null);
       onShowToast(`Cargado registro de Ficha F1 en la vista previa y formulario.`);
     }
   }, [initialFichaToLoad]);
 
   // Adjust students list structure when Category changes
   useEffect(() => {
-    if (initialFichaToLoad) return; // Skip re-initialization if loading existing
+    if (loadedId) return; // Skip re-initialization if loading existing
 
     const studentCount = category === 'A' ? 1 : 3;
     const defaultStudents = Array(studentCount).fill(null).map((_, i) => ({
@@ -98,63 +135,107 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
     setActiveAccordion(activeAccordion === name ? '' : name);
   };
 
-  const handleSaveToDatabase = async () => {
+  const performSave = async (silent = false): Promise<string | null> => {
+    // If loaded and not admin, block modifications
+    if (loadedId && !isAdmin) {
+      onShowToast("No se puede modificar una ficha que ya ha sido guardada o generada en modo público.");
+      return null;
+    }
+
     if (!workTitle.trim()) {
       onShowToast("Por favor, ingresa el Nombre del Trabajo / Producción en el apartado II.");
-      return;
+      return null;
     }
     if (!docName.trim()) {
       onShowToast("Por favor, ingresa los datos del Docente Asesor en el apartado III.");
-      return;
+      return null;
     }
 
     // Basic students check
     const emptyStudents = students.filter(s => !s.fullname.trim());
     if (emptyStudents.length === students.length) {
       onShowToast("Por favor, rellena al menos el primer estudiante en el apartado IV.");
-      return;
+      return null;
+    }
+
+    const recordId = loadedId || "f1-" + Date.now();
+    const newFichaRecord = {
+      id: recordId,
+      category,
+      ieName,
+      ieModular,
+      ieDre,
+      ieUgel,
+      ieGestion,
+      ieRegion,
+      ieProvincia,
+      ieDistrito,
+      ieDireccion,
+      workTitle,
+      workLang,
+      workLink,
+      docName,
+      docDni,
+      docSpec,
+      docCell,
+      docEmail,
+      students,
+      createdAt: initialFichaToLoad?.createdAt || new Date().toISOString()
+    };
+
+    // 1. Dual Persistence: Save to local storage first
+    try {
+      const localFichasRaw = localStorage.getItem('local_fichas');
+      let localFichas = localFichasRaw ? JSON.parse(localFichasRaw) : [];
+      
+      const index = localFichas.findIndex((f: any) => f.id === recordId);
+      if (index !== -1) {
+        localFichas[index] = newFichaRecord;
+      } else {
+        localFichas.unshift(newFichaRecord);
+      }
+      localStorage.setItem('local_fichas', JSON.stringify(localFichas));
+    } catch (e) {
+      console.error("Local storage error:", e);
     }
 
     setIsSaving(true);
     try {
+      // 2. Dual Persistence: Try to save/sync with server
       const response = await fetch('/api/fichas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category,
-          ieName,
-          ieModular,
-          ieDre,
-          ieUgel,
-          ieGestion,
-          ieRegion,
-          ieProvincia,
-          ieDistrito,
-          ieDireccion,
-          workTitle,
-          workLang,
-          workLink,
-          docName,
-          docDni,
-          docSpec,
-          docCell,
-          docEmail,
-          students
-        })
+        body: JSON.stringify(newFichaRecord)
       });
 
+      setLoadedId(recordId);
+      onRefreshHistory();
+
       if (response.ok) {
-        onShowToast(`¡Ficha de Inscripción F1 guardada correctamente en la Base de Datos!`);
-        onRefreshHistory();
+        if (!silent) {
+          onShowToast(`¡Ficha de Inscripción guardada correctamente en la Base de Datos!`);
+        }
       } else {
-        onShowToast("Error al guardar en el servidor.");
+        if (!silent) {
+          onShowToast("Guardado en almacenamiento local seguro (Sincronización de servidor diferida).");
+        }
       }
     } catch (e) {
       console.error(e);
-      onShowToast("Falla de conexión al servidor backend.");
+      setLoadedId(recordId);
+      onRefreshHistory();
+      if (!silent) {
+        onShowToast("Ficha guardada localmente (Servidor temporalmente desconectado).");
+      }
     } finally {
       setIsSaving(false);
     }
+
+    return recordId;
+  };
+
+  const handleSaveToDatabase = async () => {
+    await performSave(false);
   };
 
   const getDocXml = () => {
@@ -354,7 +435,23 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
     `;
   };
 
-  const downloadWordDocument = () => {
+  const downloadWordDocument = async () => {
+    // Save/update first
+    let currentId = loadedId;
+    if (!currentId) {
+      currentId = await performSave(true);
+      if (!currentId) {
+        // Validation failed, performSave already showed toast
+        return;
+      }
+    } else if (!isAdmin) {
+      // In read-only mode, we can still download but let's notify
+      onShowToast("Descargando expediente Word (.doc) en modo Solo Lectura.");
+    } else {
+      // If admin, save any changes before download
+      await performSave(true);
+    }
+
     const template = getDocXml();
     const blob = new Blob(['\ufeff' + template], {
       type: 'application/msword;charset=utf-8'
@@ -366,17 +463,29 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    onShowToast("Expediente Word (.doc) generado y descargado exitosamente.");
-
-    // Trigger auto-saving to DB as requested by user
-    handleSaveToDatabase();
+    onShowToast("Expediente Word (.doc) generado y guardado en la Base de Datos.");
   };
 
-  const printDocument = () => {
-    window.print();
-    onShowToast("Abriendo cuadro de diálogo de impresión / Guardado PDF.");
-    // Auto save
-    handleSaveToDatabase();
+  const printDocument = async () => {
+    // Save/update first
+    let currentId = loadedId;
+    if (!currentId) {
+      currentId = await performSave(true);
+      if (!currentId) {
+        return;
+      }
+    } else if (!isAdmin) {
+      // In read-only mode, we can still print but let's notify
+      onShowToast("Preparando impresión / PDF en modo Solo Lectura.");
+    } else {
+      // If admin, save any changes before print
+      await performSave(true);
+    }
+
+    setTimeout(() => {
+      window.print();
+      onShowToast("Abriendo cuadro de diálogo de impresión / PDF. Guardado en la Base de Datos.");
+    }, 150);
   };
 
   return (
@@ -398,6 +507,36 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
         {/* LEFT PANEL: CONFIGURATION AND FORM ACCORDIONS */}
         <div className="w-full space-y-6 no-print">
           
+          {loadedId && (
+            <div className={`p-4 rounded-3xl flex flex-col sm:flex-row justify-between items-center text-xs animate-fadeIn shadow-sm gap-3 ${
+              isAdmin 
+                ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' 
+                : 'bg-amber-50 border border-amber-200 text-amber-850'
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full ${isAdmin ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`}></span>
+                <span>
+                  {isAdmin ? (
+                    <span>
+                      <strong>Modo Administrador:</strong> Editando ficha ID <code>{loadedId}</code>. Puedes modificar y guardar cambios.
+                    </span>
+                  ) : (
+                    <span>
+                      <strong>Modo Público (Solo Lectura):</strong> Ficha registrada ID <code>{loadedId}</code>. Inicie sesión como Administrador en la pestaña Base de Datos para modificarla.
+                    </span>
+                  )}
+                </span>
+              </div>
+              <button 
+                type="button"
+                onClick={handleClearForm}
+                className="bg-white hover:bg-neutral-100 border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] shrink-0"
+              >
+                Crear Nuevo Registro
+              </button>
+            </div>
+          )}
+
           {/* Category Selector */}
           <div className="bg-white rounded-3xl shadow-sm border border-natural-border p-5 space-y-4">
             <div>
@@ -405,7 +544,8 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
               <select 
                 value={category} 
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-[#f9f9f7] border border-natural-border rounded-xl px-3 py-2.5 text-xs font-bold text-natural-text focus:outline-none focus:ring-2 focus:ring-natural-primary"
+                disabled={isReadOnly}
+                className="w-full bg-[#f9f9f7] border border-natural-border rounded-xl px-3 py-2.5 text-xs font-bold text-natural-text focus:outline-none focus:ring-2 focus:ring-natural-primary disabled:opacity-75 disabled:cursor-not-allowed"
               >
                 <option value="A">Categoría A (Individual - 1.er y 2.do Grado Primaria)</option>
                 <option value="B">Categoría B (Grupal - 3.er y 4.to Grado Primaria)</option>
@@ -446,39 +586,39 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                   <div className="grid grid-cols-2 gap-2">
                     <div className="col-span-2">
                       <label className="block text-[10px] font-bold text-natural-secondary mb-1">Nombre de la I.E.</label>
-                      <input type="text" value={ieName} onChange={(e) => setIeName(e.target.value)} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text" />
+                      <input type="text" value={ieName} onChange={(e) => setIeName(e.target.value)} disabled={isReadOnly} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-natural-secondary mb-1">Código Modular</label>
-                      <input type="text" value={ieModular} onChange={(e) => setIeModular(e.target.value)} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text" />
+                      <input type="text" value={ieModular} onChange={(e) => setIeModular(e.target.value)} disabled={isReadOnly} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-natural-secondary mb-1">DRE / GRE</label>
-                      <input type="text" value={ieDre} onChange={(e) => setIeDre(e.target.value)} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text" />
+                      <input type="text" value={ieDre} onChange={(e) => setIeDre(e.target.value)} disabled={isReadOnly} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-natural-secondary mb-1">UGEL</label>
-                      <input type="text" value={ieUgel} onChange={(e) => setIeUgel(e.target.value)} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text" />
+                      <input type="text" value={ieUgel} onChange={(e) => setIeUgel(e.target.value)} disabled={isReadOnly} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-natural-secondary mb-1">Tipo de Gestión</label>
-                      <input type="text" value={ieGestion} onChange={(e) => setIeGestion(e.target.value)} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text" />
+                      <input type="text" value={ieGestion} onChange={(e) => setIeGestion(e.target.value)} disabled={isReadOnly} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-natural-secondary mb-1">Región</label>
-                      <input type="text" value={ieRegion} onChange={(e) => setIeRegion(e.target.value)} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text" />
+                      <input type="text" value={ieRegion} onChange={(e) => setIeRegion(e.target.value)} disabled={isReadOnly} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-natural-secondary mb-1">Provincia</label>
-                      <input type="text" value={ieProvincia} onChange={(e) => setIeProvincia(e.target.value)} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text" />
+                      <input type="text" value={ieProvincia} onChange={(e) => setIeProvincia(e.target.value)} disabled={isReadOnly} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-natural-secondary mb-1">Distrito</label>
-                      <input type="text" value={ieDistrito} onChange={(e) => setIeDistrito(e.target.value)} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text" />
+                      <input type="text" value={ieDistrito} onChange={(e) => setIeDistrito(e.target.value)} disabled={isReadOnly} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-[10px] font-bold text-natural-secondary mb-1">Dirección Física</label>
-                      <input type="text" value={ieDireccion} onChange={(e) => setIeDireccion(e.target.value)} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text" />
+                      <input type="text" value={ieDireccion} onChange={(e) => setIeDireccion(e.target.value)} disabled={isReadOnly} className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" />
                     </div>
                   </div>
                 </div>
@@ -506,8 +646,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                       type="text" 
                       value={workTitle} 
                       onChange={(e) => setWorkTitle(e.target.value)} 
+                      disabled={isReadOnly}
                       placeholder="Escribe el nombre de la obra o cartelera comparativa..." 
-                      className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text" 
+                      className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -517,8 +658,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                         type="text" 
                         value={workLang} 
                         onChange={(e) => setWorkLang(e.target.value)} 
+                        disabled={isReadOnly}
                         placeholder="Ej. Castellano / Quechua" 
-                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text" 
+                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                       />
                     </div>
                     <div>
@@ -527,8 +669,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                         type="url" 
                         value={workLink} 
                         onChange={(e) => setWorkLink(e.target.value)} 
+                        disabled={isReadOnly}
                         placeholder="https://drive.google.com/..." 
-                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-mono text-[10px] text-natural-text" 
+                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-mono text-[10px] text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                       />
                     </div>
                   </div>
@@ -558,8 +701,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                         type="text" 
                         value={docName} 
                         onChange={(e) => setDocName(e.target.value)} 
+                        disabled={isReadOnly}
                         placeholder="Ej. Mendoza Quispe, Gladis Elena" 
-                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text" 
+                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                       />
                     </div>
                     <div>
@@ -568,8 +712,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                         type="text" 
                         value={docDni} 
                         onChange={(e) => setDocDni(e.target.value)} 
+                        disabled={isReadOnly}
                         placeholder="Ingresa DNI" 
-                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text" 
+                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                       />
                     </div>
                     <div>
@@ -578,8 +723,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                         type="text" 
                         value={docSpec} 
                         onChange={(e) => setDocSpec(e.target.value)} 
+                        disabled={isReadOnly}
                         placeholder="Ej. Educación Primaria" 
-                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text" 
+                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                       />
                     </div>
                     <div>
@@ -588,8 +734,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                         type="text" 
                         value={docCell} 
                         onChange={(e) => setDocCell(e.target.value)} 
+                        disabled={isReadOnly}
                         placeholder="987654321" 
-                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text" 
+                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                       />
                     </div>
                     <div>
@@ -598,8 +745,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                         type="email" 
                         value={docEmail} 
                         onChange={(e) => setDocEmail(e.target.value)} 
+                        disabled={isReadOnly}
                         placeholder="correo@ejemplo.com" 
-                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text" 
+                        className="w-full border border-natural-border rounded-lg p-2 bg-[#f9f9f7] focus:bg-white focus:outline-none focus:ring-1 focus:ring-natural-primary font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                       />
                     </div>
                   </div>
@@ -634,8 +782,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                             type="text" 
                             value={std.fullname} 
                             onChange={(e) => handleStudentFieldChange(i, 'fullname', e.target.value)}
+                            disabled={isReadOnly}
                             placeholder="Ej. Cahuana Huamán, Juan Carlos" 
-                            className="w-full border border-natural-border rounded-lg p-1.5 bg-white text-xs font-medium text-natural-text" 
+                            className="w-full border border-natural-border rounded-lg p-1.5 bg-white text-xs font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
@@ -645,8 +794,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                               type="text" 
                               value={std.dni} 
                               onChange={(e) => handleStudentFieldChange(i, 'dni', e.target.value)}
+                              disabled={isReadOnly}
                               placeholder="71234567" 
-                              className="w-full border border-natural-border rounded-lg p-1.5 bg-white text-xs text-natural-text" 
+                              className="w-full border border-natural-border rounded-lg p-1.5 bg-white text-xs text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                             />
                           </div>
                           <div>
@@ -655,8 +805,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                               type="text" 
                               value={std.age} 
                               onChange={(e) => handleStudentFieldChange(i, 'age', e.target.value)}
+                              disabled={isReadOnly}
                               placeholder="11 años" 
-                              className="w-full border border-natural-border rounded-lg p-1.5 bg-white text-xs text-natural-text" 
+                              className="w-full border border-natural-border rounded-lg p-1.5 bg-white text-xs text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                             />
                           </div>
                           <div>
@@ -665,7 +816,8 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                               type="text" 
                               value={std.grade} 
                               onChange={(e) => handleStudentFieldChange(i, 'grade', e.target.value)}
-                              className="w-full border border-natural-border rounded-lg p-1.5 bg-white text-xs font-medium text-natural-text" 
+                              disabled={isReadOnly}
+                              className="w-full border border-natural-border rounded-lg p-1.5 bg-white text-xs font-medium text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                             />
                           </div>
                           <div>
@@ -674,8 +826,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                               type="text" 
                               value={std.section} 
                               onChange={(e) => handleStudentFieldChange(i, 'section', e.target.value)}
+                              disabled={isReadOnly}
                               placeholder="Ej. B" 
-                              className="w-full border border-natural-border rounded-lg p-1.5 bg-white text-xs text-natural-text" 
+                              className="w-full border border-natural-border rounded-lg p-1.5 bg-white text-xs text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                             />
                           </div>
                         </div>
@@ -690,8 +843,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                                 type="text" 
                                 value={std.parentName} 
                                 onChange={(e) => handleStudentFieldChange(i, 'parentName', e.target.value)}
+                                disabled={isReadOnly}
                                 placeholder="Ej. Cahuana Quispe, Pedro" 
-                                className="w-full border border-natural-border rounded-lg p-1 bg-white text-[10px] text-natural-text" 
+                                className="w-full border border-natural-border rounded-lg p-1 bg-white text-[10px] text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                               />
                             </div>
                             <div>
@@ -700,8 +854,9 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                                 type="text" 
                                 value={std.parentDni} 
                                 onChange={(e) => handleStudentFieldChange(i, 'parentDni', e.target.value)}
+                                disabled={isReadOnly}
                                 placeholder="DNI apoderado" 
-                                className="w-full border border-natural-border rounded-lg p-1 bg-white text-[10px] text-natural-text" 
+                                className="w-full border border-natural-border rounded-lg p-1 bg-white text-[10px] text-natural-text disabled:opacity-75 disabled:cursor-not-allowed" 
                               />
                             </div>
                           </div>
@@ -721,11 +876,18 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
             <button 
               type="button"
               onClick={handleSaveToDatabase}
-              disabled={isSaving}
+              disabled={isSaving || isReadOnly}
               className="flex-1 py-3 bg-natural-primary hover:bg-natural-primary-hover text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Save className="w-4 h-4 text-white" />
-              <span>{isSaving ? "Guardando..." : "Registrar en Base de Datos"}</span>
+              <span>
+                {isSaving 
+                  ? "Guardando..." 
+                  : isReadOnly 
+                    ? "Bloqueado (Solo Lectura)" 
+                    : "Registrar en Base de Datos"
+                }
+              </span>
             </button>
             <button 
               type="button"

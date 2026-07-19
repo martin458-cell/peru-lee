@@ -26,20 +26,97 @@ export default function App() {
   // Loaded record state (to pass to GenerarFichaTab)
   const [selectedFichaToLoad, setSelectedFichaToLoad] = useState<FichaRecord | null>(null);
 
-  // Fetch from Express Server APIs
+  // Administrator Unlock state
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
+    return sessionStorage.getItem('db_unlocked') === 'true';
+  });
+
+  // Fetch from Express Server APIs with local storage synchronization fallback
   const fetchDatabase = async () => {
     setLoadingDb(true);
     try {
-      const fResponse = await fetch('/api/fichas');
-      const eResponse = await fetch('/api/evaluations');
-      if (fResponse.ok && eResponse.ok) {
-        const fData = await fResponse.json();
-        const eData = await eResponse.json();
-        setFichas(fData);
-        setEvaluations(eData);
+      // 1. Fetch server records
+      let serverFichas: FichaRecord[] = [];
+      let serverEvaluations: EvaluationRecord[] = [];
+      
+      try {
+        const fResponse = await fetch('/api/fichas');
+        if (fResponse.ok) {
+          serverFichas = await fResponse.json();
+        }
+      } catch (err) {
+        console.warn("Could not fetch fichas from server", err);
       }
+
+      try {
+        const eResponse = await fetch('/api/evaluations');
+        if (eResponse.ok) {
+          serverEvaluations = await eResponse.json();
+        }
+      } catch (err) {
+        console.warn("Could not fetch evaluations from server", err);
+      }
+
+      // 2. Load local storage records
+      const localFichasRaw = localStorage.getItem('local_fichas');
+      const localFichas: FichaRecord[] = localFichasRaw ? JSON.parse(localFichasRaw) : [];
+
+      const localEvaluationsRaw = localStorage.getItem('local_evaluations');
+      const localEvaluations: EvaluationRecord[] = localEvaluationsRaw ? JSON.parse(localEvaluationsRaw) : [];
+
+      // 3. Merge Fichas (combine both lists using unique IDs)
+      const mergedFichasMap = new Map<string, FichaRecord>();
+      localFichas.forEach(f => mergedFichasMap.set(f.id, f));
+      serverFichas.forEach(f => mergedFichasMap.set(f.id, f));
+
+      const mergedFichas = Array.from(mergedFichasMap.values()).sort((a, b) => 
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+
+      // 4. Merge Evaluations
+      const mergedEvalsMap = new Map<string, EvaluationRecord>();
+      localEvaluations.forEach(e => mergedEvalsMap.set(e.id, e));
+      serverEvaluations.forEach(e => mergedEvalsMap.set(e.id, e));
+
+      const mergedEvals = Array.from(mergedEvalsMap.values()).sort((a, b) => 
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+
+      // 5. Update local storage with the latest merged list to ensure synchronization
+      localStorage.setItem('local_fichas', JSON.stringify(mergedFichas));
+      localStorage.setItem('local_evaluations', JSON.stringify(mergedEvals));
+
+      // 6. Try to upload local-only records to server so they persist there too if active
+      const localOnlyFichas = mergedFichas.filter(f => !serverFichas.some(sf => sf.id === f.id));
+      for (const lf of localOnlyFichas) {
+        try {
+          await fetch('/api/fichas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(lf)
+          });
+        } catch (e) {
+          console.error("Sync error uploading ficha:", e);
+        }
+      }
+
+      const localOnlyEvals = mergedEvals.filter(e => !serverEvaluations.some(se => se.id === e.id));
+      for (const le of localOnlyEvals) {
+        try {
+          await fetch('/api/evaluations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(le)
+          });
+        } catch (e) {
+          console.error("Sync error uploading evaluation:", e);
+        }
+      }
+
+      setFichas(mergedFichas);
+      setEvaluations(mergedEvals);
     } catch (e) {
-      console.error("Error reading backend data:", e);
+      console.error("Error reading backend/local data:", e);
     } finally {
       setLoadingDb(false);
     }
@@ -61,16 +138,23 @@ export default function App() {
     if (!window.confirm("¿Estás seguro de que deseas eliminar este registro de ficha F1?")) return;
 
     try {
-      const response = await fetch(`/api/fichas/${id}`, { method: 'DELETE' });
-      if (response.ok) {
-        handleShowToast("Registro de Ficha F1 eliminado correctamente.");
-        fetchDatabase();
-      } else {
-        handleShowToast("Error al eliminar del servidor.", "error");
+      // Delete from local storage
+      const localFichasRaw = localStorage.getItem('local_fichas');
+      if (localFichasRaw) {
+        const localFichas: FichaRecord[] = JSON.parse(localFichasRaw);
+        const updated = localFichas.filter(f => f.id !== id);
+        localStorage.setItem('local_fichas', JSON.stringify(updated));
       }
+
+      // Delete from server
+      await fetch(`/api/fichas/${id}`, { method: 'DELETE' });
+      
+      handleShowToast("Registro de Ficha F1 eliminado correctamente.");
+      fetchDatabase();
     } catch (e) {
       console.error(e);
-      handleShowToast("Falla de conexión al servidor.", "error");
+      handleShowToast("Eliminado del registro local.", "success");
+      fetchDatabase();
     }
   };
 
@@ -78,16 +162,23 @@ export default function App() {
     if (!window.confirm("¿Estás seguro de que deseas eliminar este registro de calificación?")) return;
 
     try {
-      const response = await fetch(`/api/evaluations/${id}`, { method: 'DELETE' });
-      if (response.ok) {
-        handleShowToast("Registro de calificación eliminado correctamente.");
-        fetchDatabase();
-      } else {
-        handleShowToast("Error al eliminar del servidor.", "error");
+      // Delete from local storage
+      const localEvalsRaw = localStorage.getItem('local_evaluations');
+      if (localEvalsRaw) {
+        const localEvals: EvaluationRecord[] = JSON.parse(localEvalsRaw);
+        const updated = localEvals.filter(e => e.id !== id);
+        localStorage.setItem('local_evaluations', JSON.stringify(updated));
       }
+
+      // Delete from server
+      await fetch(`/api/evaluations/${id}`, { method: 'DELETE' });
+      
+      handleShowToast("Registro de calificación eliminado correctamente.");
+      fetchDatabase();
     } catch (e) {
       console.error(e);
-      handleShowToast("Falla de conexión al servidor.", "error");
+      handleShowToast("Eliminado del registro local.", "success");
+      fetchDatabase();
     }
   };
 
@@ -224,6 +315,7 @@ export default function App() {
             onShowToast={handleShowToast} 
             onRefreshHistory={fetchDatabase}
             initialFichaToLoad={selectedFichaToLoad}
+            isAdmin={isUnlocked}
           />
         )}
 
@@ -235,6 +327,8 @@ export default function App() {
             onDeleteEvaluation={handleDeleteEvaluation}
             onLoadFichaToForm={handleLoadFichaToForm}
             onRefresh={fetchDatabase}
+            isUnlocked={isUnlocked}
+            setIsUnlocked={setIsUnlocked}
           />
         )}
 

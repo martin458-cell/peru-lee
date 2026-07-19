@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Trash2, Calendar, FileText, Award, Eye, ExternalLink, RefreshCw, Layers, Lock, Unlock } from 'lucide-react';
+import { Search, Trash2, Calendar, FileText, Award, Eye, ExternalLink, RefreshCw, Layers, Lock, Unlock, FileSpreadsheet } from 'lucide-react';
 import { FichaRecord, EvaluationRecord } from '../types';
 
 interface HistorialProps {
@@ -9,6 +9,8 @@ interface HistorialProps {
   onDeleteEvaluation: (id: string) => void;
   onLoadFichaToForm: (ficha: FichaRecord) => void;
   onRefresh: () => void;
+  isUnlocked: boolean;
+  setIsUnlocked: (val: boolean) => void;
 }
 
 export default function HistorialTab({ 
@@ -17,7 +19,9 @@ export default function HistorialTab({
   onDeleteFicha, 
   onDeleteEvaluation, 
   onLoadFichaToForm,
-  onRefresh 
+  onRefresh,
+  isUnlocked,
+  setIsUnlocked
 }: HistorialProps) {
   const [activeSubTab, setActiveSubTab] = useState<'fichas' | 'evals'>('fichas');
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,9 +29,6 @@ export default function HistorialTab({
 
   // Password Protection State
   const [password, setPassword] = useState('');
-  const [isUnlocked, setIsUnlocked] = useState(() => {
-    return sessionStorage.getItem('db_unlocked') === 'true';
-  });
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleUnlock = (e: React.FormEvent) => {
@@ -95,6 +96,124 @@ export default function HistorialTab({
       default:
         return 'bg-gray-50 text-gray-700 border-gray-200';
     }
+  };
+
+  const exportFichasToExcel = () => {
+    const headers = [
+      "ID", "Categoria", "Fecha de Creacion", "Institucion Educativa", "Codigo Modular", "DRE", "UGEL", "Gestion", "Region", "Provincia", "Distrito", "Direccion I.E.", 
+      "Titulo del Trabajo", "Lengua / Variante", "Enlace de Video", 
+      "Docente Asesor", "Docente DNI", "Docente Especialidad", "Docente Celular", "Docente Correo",
+      "Estudiante 1 Nombre", "Estudiante 1 DNI", "Estudiante 1 Edad", "Estudiante 1 Grado", "Estudiante 1 Seccion", "Estudiante 1 Apoderado", "Estudiante 1 Apoderado DNI",
+      "Estudiante 2 Nombre", "Estudiante 2 DNI", "Estudiante 2 Edad", "Estudiante 2 Grado", "Estudiante 2 Seccion", "Estudiante 2 Apoderado", "Estudiante 2 Apoderado DNI",
+      "Estudiante 3 Nombre", "Estudiante 3 DNI", "Estudiante 3 Edad", "Estudiante 3 Grado", "Estudiante 3 Seccion", "Estudiante 3 Apoderado", "Estudiante 3 Apoderado DNI"
+    ];
+
+    const rows = filteredFichas.map(f => {
+      const studentData = [];
+      for (let i = 0; i < 3; i++) {
+        const std = (f.students?.[i] || {}) as any;
+        studentData.push(
+          std.fullname || "",
+          std.dni || "",
+          std.age || "",
+          std.grade || "",
+          std.section || "",
+          std.parentName || "",
+          std.parentDni || ""
+        );
+      }
+
+      return [
+        f.id,
+        `Categoria ${f.category}`,
+        formatDate(f.createdAt),
+        f.ieName,
+        f.ieModular,
+        f.ieDre,
+        f.ieUgel,
+        f.ieGestion,
+        f.ieRegion,
+        f.ieProvincia,
+        f.ieDistrito,
+        f.ieDireccion,
+        f.workTitle,
+        f.workLang,
+        f.workLink,
+        f.docName,
+        f.docDni,
+        f.docSpec,
+        f.docCell,
+        f.docEmail,
+        ...studentData
+      ];
+    });
+
+    const escapeCSVField = (val: any) => {
+      if (val === undefined || val === null) return "";
+      const stringified = String(val).replace(/"/g, '""');
+      if (stringified.includes(";") || stringified.includes("\n") || stringified.includes('"')) {
+        return `"${stringified}"`;
+      }
+      return stringified;
+    };
+
+    const csvContent = [
+      headers.map(escapeCSVField).join(";"),
+      ...rows.map(row => row.map(escapeCSVField).join(";"))
+    ].join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Fichas_F1_Registradas_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportEvaluationsToExcel = () => {
+    const headers = [
+      "ID", "Estudiante o Equipo", "Categoria", "Puntaje Rustico Producto", "Puntaje Maximo Producto", "Puntajes Detallados Producto", "Puntajes Detallados Desafio", "Puntaje Final (%)", "Nivel de Logro", "Fecha de Creacion"
+    ];
+
+    const rows = filteredEvals.map(e => {
+      const scoresStr = Array.isArray(e.scores) ? e.scores.join(", ") : "";
+      const desafioScoresStr = Array.isArray(e.desafioScores) ? e.desafioScores.join(", ") : "";
+      return [
+        e.id,
+        e.studentName,
+        e.category,
+        e.totalProductRaw,
+        e.maxProductRaw,
+        scoresStr,
+        desafioScoresStr,
+        e.finalScorePercent ? `${e.finalScorePercent}%` : "",
+        e.level,
+        formatDate(e.createdAt)
+      ];
+    });
+
+    const escapeCSVField = (val: any) => {
+      if (val === undefined || val === null) return "";
+      const stringified = String(val).replace(/"/g, '""');
+      if (stringified.includes(";") || stringified.includes("\n") || stringified.includes('"')) {
+        return `"${stringified}"`;
+      }
+      return stringified;
+    };
+
+    const csvContent = [
+      headers.map(escapeCSVField).join(";"),
+      ...rows.map(row => row.map(escapeCSVField).join(";"))
+    ].join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Evaluaciones_Registradas_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (!isUnlocked) {
@@ -210,6 +329,17 @@ export default function HistorialTab({
             title="Sincronizar base de datos"
           >
             <RefreshCw className="w-4 h-4" />
+          </button>
+
+          {/* Export to Excel Button */}
+          <button 
+            type="button"
+            onClick={activeSubTab === 'fichas' ? exportFichasToExcel : exportEvaluationsToExcel}
+            className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl transition-all font-bold text-xs flex items-center gap-1.5 shrink-0"
+            title="Exportar registros a Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span className="hidden sm:inline">Exportar Excel</span>
           </button>
 
           {/* Lock Button */}

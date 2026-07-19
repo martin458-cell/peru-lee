@@ -131,10 +131,27 @@ async function startServer() {
 
   app.post("/api/fichas", (req, res) => {
     const fichas = readDatabase(fichasFilePath);
+    const incoming = req.body || {};
+    const id = incoming.id;
+    
+    if (id) {
+      const idx = fichas.findIndex((f) => f.id === id);
+      if (idx !== -1) {
+        // Update existing
+        fichas[idx] = {
+          ...fichas[idx],
+          ...incoming,
+          updatedAt: new Date().toISOString()
+        };
+        writeDatabase(fichasFilePath, fichas);
+        return res.json(fichas[idx]);
+      }
+    }
+
     const newFicha = {
-      id: "f1-" + Date.now(),
-      ...req.body,
-      createdAt: new Date().toISOString()
+      id: id || "f1-" + Date.now(),
+      ...incoming,
+      createdAt: incoming.createdAt || new Date().toISOString()
     };
     fichas.unshift(newFicha); // Add to beginning
     writeDatabase(fichasFilePath, fichas);
@@ -162,10 +179,27 @@ async function startServer() {
 
   app.post("/api/evaluations", (req, res) => {
     const evals = readDatabase(evaluationsFilePath);
+    const incoming = req.body || {};
+    const id = incoming.id;
+
+    if (id) {
+      const idx = evals.findIndex((e) => e.id === id);
+      if (idx !== -1) {
+        // Update existing
+        evals[idx] = {
+          ...evals[idx],
+          ...incoming,
+          updatedAt: new Date().toISOString()
+        };
+        writeDatabase(evaluationsFilePath, evals);
+        return res.json(evals[idx]);
+      }
+    }
+
     const newEval = {
-      id: "ev-" + Date.now(),
-      ...req.body,
-      createdAt: new Date().toISOString()
+      id: id || "ev-" + Date.now(),
+      ...incoming,
+      createdAt: incoming.createdAt || new Date().toISOString()
     };
     evals.unshift(newEval); // Add to beginning
     writeDatabase(evaluationsFilePath, evals);
