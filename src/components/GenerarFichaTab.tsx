@@ -1,15 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Save, Download, Printer, User, Building, BookMarked, HelpCircle, ChevronDown, CheckCircle } from 'lucide-react';
+import { FileText, Save, Download, Printer, User, Building, BookMarked, HelpCircle, ChevronDown, CheckCircle, Cloud, ExternalLink } from 'lucide-react';
 import { Student } from '../types';
+import { getOrCreateFolder, uploadFileToGoogleDrive, syncSingleFichaToGoogleSheet } from '../lib/googleDriveSheets';
 
 interface GenerarFichaProps {
   onShowToast: (msg: string) => void;
   onRefreshHistory: () => void;
   initialFichaToLoad?: any;
   isAdmin: boolean;
+  googleToken?: string | null;
+  googleSpreadsheetId?: string | null;
+  googleUser?: any;
+  onGoogleLogin?: () => void;
 }
 
-export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initialFichaToLoad, isAdmin }: GenerarFichaProps) {
+export default function GenerarFichaTab({ 
+  onShowToast, 
+  onRefreshHistory, 
+  initialFichaToLoad, 
+  isAdmin,
+  googleToken,
+  googleSpreadsheetId,
+  googleUser,
+  onGoogleLogin
+}: GenerarFichaProps) {
   // Tabs accordions state
   const [activeAccordion, setActiveAccordion] = useState<string>('work');
 
@@ -42,8 +56,48 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
 
   const isReadOnly = !!loadedId && !isAdmin;
 
+  const [isUploadingDrive, setIsUploadingDrive] = useState(false);
+  const [driveFileLink, setDriveFileLink] = useState<string | null>(null);
+
+  const saveWordToGoogleDrive = async () => {
+    if (!googleToken) {
+      if (onGoogleLogin) {
+        onGoogleLogin();
+      } else {
+        onShowToast("Por favor, conecta primero tu cuenta de Google.");
+      }
+      return;
+    }
+
+    setIsUploadingDrive(true);
+    setDriveFileLink(null);
+    try {
+      // 1. Get or create folder
+      onShowToast("Obteniendo o creando carpeta 'Expedientes Ficha Anexo 1' en Google Drive...");
+      const folderId = await getOrCreateFolder(googleToken, "Expedientes Ficha Anexo 1");
+
+      // 2. Generate file blob
+      const template = getDocXml();
+      const blob = new Blob([template], { type: "application/msword" });
+      const filename = `Anexo1_Ficha_Inscripcion_${category}_${workTitle.slice(0, 25).replace(/\s+/g, '_') || 'Ficha'}.doc`;
+
+      // 3. Upload file
+      onShowToast("Subiendo archivo Word (.doc) a Google Drive...");
+      const fileData = await uploadFileToGoogleDrive(googleToken, folderId, filename, "application/msword", blob);
+
+      setDriveFileLink(fileData.webViewLink);
+      onShowToast("¡Documento guardado con éxito en tu Google Drive!");
+    } catch (err: any) {
+      console.error(err);
+      onShowToast("Error al guardar en Google Drive: " + err.message);
+    } finally {
+      setIsUploadingDrive(false);
+    }
+  };
+
   const handleClearForm = () => {
     setLoadedId(null);
+    setDriveFileLink(null);
     setWorkTitle('');
     setWorkLang('');
     setWorkLink('');
@@ -74,9 +128,15 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
     onShowToast("Formulario limpiado para un nuevo registro.");
   };
 
+  const handleDuplicateForEdit = () => {
+    setLoadedId(null);
+    onShowToast("¡Copia editable creada! Se conservaron los datos. Ahora puedes modificarlos y registrarlos como una nueva ficha.");
+  };
+
   // Load selected ficha record if supplied (passed from History reload action)
   useEffect(() => {
     if (initialFichaToLoad) {
+      setDriveFileLink(null);
       setCategory(initialFichaToLoad.category || 'C');
       setIeName(initialFichaToLoad.ieName || '');
       setIeModular(initialFichaToLoad.ieModular || '');
@@ -229,6 +289,21 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
       }
     } finally {
       setIsSaving(false);
+    }
+
+    // Google Sheets Auto-Sync if connected
+    if (googleToken && googleSpreadsheetId) {
+      try {
+        await syncSingleFichaToGoogleSheet(googleToken, googleSpreadsheetId, newFichaRecord);
+        if (!silent) {
+          onShowToast(`¡Ficha de Inscripción guardada y sincronizada en Google Sheets!`);
+        }
+      } catch (gsErr: any) {
+        console.error("Google Sheets sync error:", gsErr);
+        if (!silent) {
+          onShowToast("Guardado en DB, pero falló la sincronización con Google Sheets: " + gsErr.message);
+        }
+      }
     }
 
     return recordId;
@@ -436,20 +511,16 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
   };
 
   const downloadWordDocument = async () => {
-    // Save/update first
-    let currentId = loadedId;
-    if (!currentId) {
-      currentId = await performSave(true);
-      if (!currentId) {
-        // Validation failed, performSave already showed toast
-        return;
-      }
-    } else if (!isAdmin) {
-      // In read-only mode, we can still download but let's notify
-      onShowToast("Descargando expediente Word (.doc) en modo Solo Lectura.");
+    // Attempt to save/update first, but do not block download on validation failures
+    let savedSuccessfully = false;
+    if (!loadedId) {
+      const savedId = await performSave(true);
+      savedSuccessfully = !!savedId;
+    } else if (isAdmin) {
+      const savedId = await performSave(true);
+      savedSuccessfully = !!savedId;
     } else {
-      // If admin, save any changes before download
-      await performSave(true);
+      onShowToast("Descargando expediente Word (.doc) en modo Solo Lectura.");
     }
 
     const template = getDocXml();
@@ -463,28 +534,38 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    onShowToast("Expediente Word (.doc) generado y guardado en la Base de Datos.");
+
+    if (!loadedId && !savedSuccessfully) {
+      onShowToast("Expediente Word (.doc) descargado (No se registró en la BD por campos requeridos incompletos).");
+    } else if (isAdmin || !loadedId) {
+      onShowToast("Expediente Word (.doc) descargado y guardado correctamente en la Base de Datos.");
+    } else {
+      onShowToast("Expediente Word (.doc) descargado exitosamente en modo Solo Lectura.");
+    }
   };
 
   const printDocument = async () => {
-    // Save/update first
-    let currentId = loadedId;
-    if (!currentId) {
-      currentId = await performSave(true);
-      if (!currentId) {
-        return;
-      }
-    } else if (!isAdmin) {
-      // In read-only mode, we can still print but let's notify
-      onShowToast("Preparando impresión / PDF en modo Solo Lectura.");
+    // Attempt to save/update first, but do not block print on validation failures
+    let savedSuccessfully = false;
+    if (!loadedId) {
+      const savedId = await performSave(true);
+      savedSuccessfully = !!savedId;
+    } else if (isAdmin) {
+      const savedId = await performSave(true);
+      savedSuccessfully = !!savedId;
     } else {
-      // If admin, save any changes before print
-      await performSave(true);
+      onShowToast("Preparando impresión / PDF en modo Solo Lectura.");
     }
 
     setTimeout(() => {
       window.print();
-      onShowToast("Abriendo cuadro de diálogo de impresión / PDF. Guardado en la Base de Datos.");
+      if (!loadedId && !savedSuccessfully) {
+        onShowToast("Abriendo diálogo de impresión (No se registró en la BD por campos requeridos incompletos).");
+      } else if (isAdmin || !loadedId) {
+        onShowToast("Abriendo diálogo de impresión. Registro guardado en la Base de Datos.");
+      } else {
+        onShowToast("Abriendo diálogo de impresión en modo Solo Lectura.");
+      }
     }, 150);
   };
 
@@ -527,13 +608,24 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
                   )}
                 </span>
               </div>
-              <button 
-                type="button"
-                onClick={handleClearForm}
-                className="bg-white hover:bg-neutral-100 border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] shrink-0"
-              >
-                Crear Nuevo Registro
-              </button>
+              <div className="flex flex-wrap gap-2 shrink-0">
+                {!isAdmin && (
+                  <button 
+                    type="button"
+                    onClick={handleDuplicateForEdit}
+                    className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] hover:shadow-md shrink-0"
+                  >
+                    Duplicar para Editar
+                  </button>
+                )}
+                <button 
+                  type="button"
+                  onClick={handleClearForm}
+                  className="bg-white hover:bg-neutral-100 border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-xl font-bold transition-all text-[11px] shrink-0"
+                >
+                  Crear Nuevo Registro
+                </button>
+              </div>
             </div>
           )}
 
@@ -892,12 +984,50 @@ export default function GenerarFichaTab({ onShowToast, onRefreshHistory, initial
             <button 
               type="button"
               onClick={downloadWordDocument}
-              className="py-3 px-4 bg-natural-secondary hover:bg-[#a00000] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow"
+              className="py-3 px-4 bg-natural-secondary hover:bg-[#a00000] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow shrink-0"
             >
               <Download className="w-4 h-4" />
               <span>Generar Word (.doc)</span>
             </button>
+            
+            {googleToken ? (
+              <button 
+                type="button"
+                onClick={saveWordToGoogleDrive}
+                disabled={isUploadingDrive}
+                className="py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow shrink-0 disabled:opacity-50"
+              >
+                <Cloud className={`w-4 h-4 ${isUploadingDrive ? 'animate-pulse' : ''}`} />
+                <span>{isUploadingDrive ? "Guardando..." : "Guardar en Drive"}</span>
+              </button>
+            ) : (
+              <button 
+                type="button"
+                onClick={onGoogleLogin}
+                className="py-3 px-4 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow shrink-0"
+              >
+                <Cloud className="w-4 h-4 text-slate-500" />
+                <span>Usar Google Drive</span>
+              </button>
+            )}
           </div>
+          
+          {driveFileLink && (
+            <div className="mt-1 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800 flex items-center justify-between gap-3 shadow-sm no-print">
+              <span className="font-bold flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                ¡Guardado en tu Google Drive!
+              </span>
+              <a 
+                href={driveFileLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-emerald-700 font-bold hover:underline"
+              >
+                Abrir Archivo <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          )}
           <button 
             type="button"
             onClick={printDocument}
