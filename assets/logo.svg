@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <!-- Definition of gradients and shadows -->
+  <defs>
+    <radialGradient id="shieldGrad" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#a0e0ff" />
+      <stop offset="100%" stop-color="#55b0e6" />
+    </radialGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE000" />
+      <stop offset="100%" stop-color="#799F0C" />
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E52427" />
+      <stop offset="100%" stop-color="#B31013" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- External Red Border of Shield -->
+  <path d="M 50,40 
+           Q 250,5 450,40 
+           Q 460,250 450,330 
+           Q 420,430 250,490 
+           Q 80,430 50,330 
+           Q 40,250 50,40 Z" 
+        fill="#E52427" 
+        filter="url(#shadow)" />
+
+  <!-- Inner Light Blue Shield -->
+  <path d="M 62,50 
+           Q 250,17 438,50 
+           Q 447,250 438,322 
+           Q 410,418 250,475 
+           Q 90,418 62,322 
+           Q 53,250 62,50 Z" 
+        fill="url(#shieldGrad)" />
+
+  <!-- School Name Text (Túpac Amaru II) -->
+  <path id="textPathUpper" d="M 85,95 Q 250,55 415,95" fill="none" />
+  <text font-family="'Inter', 'Georgia', serif" font-weight="900" font-size="28" fill="#1A365D" text-anchor="middle">
+    <textPath href="#textPathUpper" startOffset="50%">
+      I.E. "TÚPAC AMARU II"
+    </textPath>
+  </text>
+
+  <!-- School Number 24009 -->
+  <text x="250" y="145" font-family="'Inter', 'Arial Black', sans-serif" font-weight="900" font-size="38" fill="#111827" letter-spacing="4" text-anchor="middle">
+    24009
+  </text>
+
+  <!-- CENTRAL PORTRAIT: Túpac Amaru II Stylized Portrait -->
+  <g id="portrait" transform="translate(250, 260)">
+    <!-- Hair background -->
+    <path d="M -55,-10 C -55,40 -40,70 -30,85 C -20,100 20,100 30,85 C 40,70 55,40 55,-10 Z" fill="#111" />
+    
+    <!-- Face -->
+    <path d="M -35,-25 C -35,-15 -35,5 -30,25 C -25,45 -15,55 0,55 C 15,55 25,45 30,25 C 35,5 35,-15 35,-25 Z" fill="#E29B7A" />
+    
+    <!-- Hair strands flanking face -->
+    <path d="M -35,-25 C -45,10 -45,45 -40,65 C -35,55 -30,45 -35,-25 Z" fill="#1a1a1a" />
+    <path d="M 35,-25 C 45,10 45,45 40,65 C 35,55 30,45 35,-25 Z" fill="#1a1a1a" />
+
+    <!-- Classic Hat (Sombrero Cordobés) -->
+    <!-- Crown -->
+    <path d="M -45,-30 C -40,-95 40,-95 45,-30 Z" fill="#222" />
+    <!-- Hat Brim -->
+    <ellipse cx="0" cy="-28" rx="85" ry="16" fill="#111" />
+    <!-- Ribbon on hat -->
+    <path d="M -44,-33 Q 0,-30 44,-33 L 45,-39 Q 0,-36 -45,-39 Z" fill="#2B6CB0" />
+
+    <!-- Eyebrows and Eyes -->
+    <path d="M -22,-8 Q -15,-12 -8,-9" stroke="#111" stroke-width="3" fill="none" />
+    <path d="M 8,-9 Q 15,-12 22,-8" stroke="#111" stroke-width="3" fill="none" />
+    <!-- Eyes -->
+    <ellipse cx="-15" cy="-2" rx="4" ry="2.5" fill="#111" />
+    <ellipse cx="15" cy="-2" rx="4" ry="2.5" fill="#111" />
+
+    <!-- Nose -->
+    <path d="M -2,0 L -3,15 L 3,15 Z" fill="#C67D5A" />
+    <path d="M -3,15 Q 0,18 3,15" stroke="#9C5230" stroke-width="2" fill="none" />
+
+    <!-- Mouth -->
+    <path d="M -12,28 Q 0,33 12,28" stroke="#8A3020" stroke-width="3" fill="none" />
+
+    <!-- White Collar/Scarf (Pañoleta) -->
+    <path d="M -20,53 L 20,53 L 25,85 L 0,95 L -25,85 Z" fill="#FFF" stroke="#E2E8F0" stroke-width="1" />
+    <path d="M 0,53 L 0,95" stroke="#CBD5E0" stroke-width="1.5" />
+
+    <!-- Poncho/Shoulders -->
+    <path d="M -85,85 C -60,65 -30,55 -25,53 L -20,80 L -35,100 Z" fill="#4A5568" />
+    <path d="M 85,85 C 60,65 30,55 25,53 L 20,80 L 35,100 Z" fill="#4A5568" />
+  </g>
+
+  <!-- Left Palm Branch (Green leaves) -->
+  <g transform="translate(145, 330) rotate(-15) scale(0.9)">
+    <path d="M 0,80 Q -40,30 -25,-100 Q -10,-40 0,80" fill="#2F855A" opacity="0.9" />
+    <!-- Palm Leaves -->
+    <path d="M -22,40 C -45,30 -50,15 -45,15 C -40,15 -30,25 -20,35 Z" fill="#38A169" />
+    <path d="M -24,15 C -55,5 -60,-10 -52,-10 C -44,-10 -35,0 -22,10 Z" fill="#48BB78" />
+    <path d="M -26,-10 C -60,-25 -65,-40 -56,-40 C -47,-40 -35,-25 -22,-15 Z" fill="#38A169" />
+    <path d="M -25,-35 C -55,-55 -55,-70 -48,-70 C -41,-70 -30,-50 -20,-40 Z" fill="#48BB78" />
+    <path d="M -20,-60 C -45,-85 -40,-95 -34,-95 C -28,-95 -20,-75 -12,-62 Z" fill="#38A169" />
+  </g>
+
+  <!-- Right Laurel Branch (Green leaves with Red Berries) -->
+  <g transform="translate(355, 330) rotate(15) scale(0.9)">
+    <path d="M 0,80 Q 40,30 25,-100 Q 10,-40 0,80" fill="#276749" opacity="0.9" />
+    <!-- Laurel Leaves -->
+    <path d="M 22,40 C 45,30 50,15 45,15 C 40,15 30,25 20,35 Z" fill="#2F855A" />
+    <path d="M 24,15 C 55,5 60,-10 52,-10 C 44,-10 35,0 22,10 Z" fill="#38A169" />
+    <path d="M 26,-10 C 60,-25 65,-40 56,-40 C 47,-40 35,-25 22,-15 Z" fill="#2F855A" />
+    <path d="M 25,-35 C 55,-55 55,-70 48,-70 C 41,-70 30,-50 20,-40 Z" fill="#38A169" />
+    <!-- Red Berries -->
+    <circle cx="12" cy="25" r="7" fill="#E52427" />
+    <circle cx="16" cy="-5" r="7" fill="#E52427" />
+    <circle cx="10" cy="-45" r="7" fill="#E52427" />
+    <circle cx="8" cy="-75" r="6" fill="#E52427" />
+  </g>
+
+  <!-- Ribbon/Banner with "ESTUDIO • SUPERACIÓN • TRABAJO" -->
+  <g id="banner" transform="translate(250, 415)">
+    <!-- Red Background Banner Ribbon -->
+    <path d="M -160,-12 
+             C -90,-28 90,-28 160,-12 
+             L 170,14 
+             C 90,-2 
+             -90,-2 -170,14 Z" 
+          fill="url(#redGrad)" 
+          stroke="#FFF" 
+          stroke-width="2" />
+    
+    <!-- White borders inside ribbon -->
+    <path d="M -155,-7 C -85,-23 85,-23 155,-7" stroke="#FFF" stroke-width="1.5" fill="none" opacity="0.8" />
+    <path d="M -162,8 C -85,-8 85,-8 162,8" stroke="#FFF" stroke-width="1.5" fill="none" opacity="0.8" />
+
+    <!-- Fishtail Left -->
+    <path d="M -160,-12 L -185,-30 L -170,14 Z" fill="#900" />
+    <path d="M -185,-30 L -210,0 L -170,14 Z" fill="#B11" />
+    
+    <!-- Fishtail Right -->
+    <path d="M 160,-12 L 185,-30 L 170,14 Z" fill="#900" />
+    <path d="M 185,-30 L 210,0 L 170,14 Z" fill="#B11" />
+
+    <!-- Text on Ribbon -->
+    <path id="ribbonTextPath" d="M -160,2 C -80,-12 80,-12 160,2" fill="none" />
+    <text font-family="'Inter', 'Arial', sans-serif" font-weight="900" font-size="15" fill="#FFF" text-anchor="middle">
+      <textPath href="#ribbonTextPath" startOffset="50%">
+        ESTUDIO • SUPERACIÓN • TRABAJO
+      </textPath>
+    </text>
+  </g>
+
+  <!-- Puquio Text at the bottom -->
+  <text x="250" y="465" font-family="'Inter', 'Georgia', serif" font-weight="900" font-size="32" fill="#1A365D" letter-spacing="3" text-anchor="middle">
+    PUQUIO
+  </text>
+</svg>

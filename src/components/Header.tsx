@@ -7,17 +7,22 @@ export default function Header() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent)] pointer-events-none"></div>
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 relative z-10">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/15 text-white border border-white/10 mb-3 tracking-wide">
-              <span className="w-1.5 h-1.5 rounded-full bg-natural-accent animate-pulse"></span>
-              Bases Oficiales, Calificaciones y Generador del Expediente EPL 2026
-            </span>
-            <h1 className="text-3xl sm:text-4xl font-serif font-bold tracking-tight">
-              Plataforma El Perú Lee <span className="italic font-normal text-natural-accent">2026</span>
-            </h1>
-            <p className="mt-2 text-sm text-slate-200 max-w-2xl font-light leading-relaxed">
-              Guía pedagógica interactiva, calculadora de rúbricas ponderadas, generador de Ficha de Inscripción (Anexo F1) para EBR y base de datos de expedientes, diseñada con los colores institucionales de la I.E.P.M. N° 24009 "Túpac Amaru II" (Rojo, Blanco, Dorado y Azul Marino).
-            </p>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+            <div className="w-24 h-24 bg-white/15 rounded-3xl border border-white/20 p-2.5 shadow-md flex items-center justify-center shrink-0">
+              <img src="/assets/logo.svg" alt="I.E. Túpac Amaru II" className="w-full h-full object-contain filter drop-shadow" />
+            </div>
+            <div className="text-center sm:text-left">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/15 text-white border border-white/10 mb-3 tracking-wide">
+                <span className="w-1.5 h-1.5 rounded-full bg-natural-accent animate-pulse"></span>
+                Bases Oficiales, Calificaciones y Generador del Expediente EPL 2026
+              </span>
+              <h1 className="text-3xl sm:text-4xl font-serif font-bold tracking-tight">
+                Plataforma El Perú Lee <span className="italic font-normal text-natural-accent">2026</span>
+              </h1>
+              <p className="mt-2 text-sm text-slate-200 max-w-xl font-light leading-relaxed">
+                Guía pedagógica interactiva, calculadora de rúbricas ponderadas, generador de Ficha de Inscripción (Anexo F1) para EBR y base de datos de expedientes, diseñada con los colores institucionales de la I.E.P.M. N° 24009 "Túpac Amaru II" (Rojo, Blanco, Dorado y Azul Marino).
+              </p>
+            </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-sm shrink-0">
             <div className="text-center sm:text-left">
