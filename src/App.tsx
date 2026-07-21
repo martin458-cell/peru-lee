@@ -10,6 +10,7 @@ import CronogramaTab from './components/CronogramaTab';
 import SedesTab from './components/SedesTab';
 import ChecklistTab from './components/ChecklistTab';
 import HistorialTab from './components/HistorialTab';
+import GuiaDocenteTab from './components/GuiaDocenteTab';
 
 import { FichaRecord, EvaluationRecord } from './types';
 import { User } from 'firebase/auth';
@@ -17,7 +18,7 @@ import { initAuth, googleSignIn, logout, setCachedAccessToken } from './lib/goog
 import { getOrCreateFichasSheet, syncFichasToGoogleSheet, deleteFichaFromGoogleSheet } from './lib/googleDriveSheets';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>('categories');
+  const [activeTab, setActiveTab] = useState<string>('guide');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
@@ -308,8 +309,21 @@ export default function App() {
       {/* Sticky Tab Navigation */}
       <nav className="bg-white border-b border-natural-border sticky top-0 z-50 shadow-sm no-print">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-1 py-3 overflow-x-auto scrollbar-none">
+          <div className="flex flex-row md:flex-wrap items-center justify-start md:justify-center gap-1 py-3 overflow-x-auto md:overflow-x-visible scrollbar-none">
             
+            <button 
+              type="button"
+              onClick={() => setActiveTab('guide')}
+              className={`px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 border ${
+                activeTab === 'guide'
+                  ? 'bg-red-600/10 text-red-600 border-red-200/40'
+                  : 'text-natural-secondary hover:bg-red-50 hover:text-red-700 border-transparent'
+              }`}
+            >
+              <FileText className="w-4 h-4 text-red-600" />
+              Guía Pedagógica PDF
+            </button>
+
             <button 
               type="button"
               onClick={() => setActiveTab('categories')}
@@ -493,6 +507,8 @@ export default function App() {
         </div>
 
         {/* Render Active Tab Content */}
+        {activeTab === 'guide' && <GuiaDocenteTab />}
+        
         {activeTab === 'categories' && <CategoriasTab />}
         
         {activeTab === 'calculator' && (
