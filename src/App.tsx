@@ -11,6 +11,7 @@ import SedesTab from './components/SedesTab';
 import ChecklistTab from './components/ChecklistTab';
 import HistorialTab from './components/HistorialTab';
 import GuiaDocenteTab from './components/GuiaDocenteTab';
+import BibliotecaTab from './components/BibliotecaTab';
 
 import { FichaRecord, EvaluationRecord } from './types';
 import { User } from 'firebase/auth';
@@ -307,14 +308,14 @@ export default function App() {
       <Header />
 
       {/* Sticky Tab Navigation */}
-      <nav className="bg-white border-b border-natural-border sticky top-0 z-50 shadow-sm no-print">
+      <nav className="bg-white border-b border-natural-border sticky top-0 z-50 shadow-md no-print">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-row md:flex-wrap items-center justify-start md:justify-center gap-1 py-3 overflow-x-auto md:overflow-x-visible scrollbar-none">
+          <div className="flex flex-row md:flex-wrap items-center justify-start md:justify-center gap-1.5 md:gap-2 py-3 overflow-x-auto md:overflow-x-visible scrollbar-none">
             
             <button 
               type="button"
               onClick={() => setActiveTab('guide')}
-              className={`px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 border ${
+              className={`px-3 md:px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 md:gap-2 border ${
                 activeTab === 'guide'
                   ? 'bg-red-600/10 text-red-600 border-red-200/40'
                   : 'text-natural-secondary hover:bg-red-50 hover:text-red-700 border-transparent'
@@ -326,8 +327,21 @@ export default function App() {
 
             <button 
               type="button"
+              onClick={() => setActiveTab('library')}
+              className={`px-3 md:px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 md:gap-2 border ${
+                activeTab === 'library'
+                  ? 'bg-red-600/10 text-red-600 border-red-200/40'
+                  : 'text-natural-secondary hover:bg-red-50 hover:text-red-700 border-transparent'
+              }`}
+            >
+              <BookOpen className="w-4 h-4 text-red-600" />
+              Biblioteca Digital
+            </button>
+
+            <button 
+              type="button"
               onClick={() => setActiveTab('categories')}
-              className={`px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 border ${
+              className={`px-3 md:px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 md:gap-2 border ${
                 activeTab === 'categories'
                   ? 'bg-natural-primary/10 text-natural-primary border-natural-primary/20'
                   : 'text-natural-secondary hover:bg-natural-bg hover:text-natural-primary border-transparent'
@@ -340,7 +354,7 @@ export default function App() {
             <button 
               type="button"
               onClick={() => setActiveTab('calculator')}
-              className={`px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 border ${
+              className={`px-3 md:px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 md:gap-2 border ${
                 activeTab === 'calculator'
                   ? 'bg-natural-primary/10 text-natural-primary border-natural-primary/20'
                   : 'text-natural-secondary hover:bg-natural-bg hover:text-natural-primary border-transparent'
@@ -357,7 +371,7 @@ export default function App() {
                 setSelectedFichaToLoad(null);
                 setActiveTab('generator');
               }}
-              className={`px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 border ${
+              className={`px-3 md:px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 md:gap-2 border ${
                 activeTab === 'generator'
                   ? 'bg-natural-primary/10 text-natural-primary border-natural-primary/20'
                   : 'text-natural-secondary hover:bg-natural-bg hover:text-natural-primary border-transparent'
@@ -370,7 +384,7 @@ export default function App() {
             <button 
               type="button"
               onClick={() => setActiveTab('history')}
-              className={`px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 border ${
+              className={`px-3 md:px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 md:gap-2 border ${
                 activeTab === 'history'
                   ? 'bg-natural-primary/10 text-natural-primary border-natural-primary/20'
                   : 'text-natural-secondary hover:bg-natural-bg hover:text-natural-primary border-transparent'
@@ -383,7 +397,7 @@ export default function App() {
             <button 
               type="button"
               onClick={() => setActiveTab('timeline')}
-              className={`px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 border ${
+              className={`px-3 md:px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 md:gap-2 border ${
                 activeTab === 'timeline'
                   ? 'bg-natural-primary/10 text-natural-primary border-natural-primary/20'
                   : 'text-natural-secondary hover:bg-natural-bg hover:text-natural-primary border-transparent'
@@ -396,7 +410,7 @@ export default function App() {
             <button 
               type="button"
               onClick={() => setActiveTab('sedes')}
-              className={`px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 border ${
+              className={`px-3 md:px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 md:gap-2 border ${
                 activeTab === 'sedes'
                   ? 'bg-natural-primary/10 text-natural-primary border-natural-primary/20'
                   : 'text-natural-secondary hover:bg-natural-bg hover:text-natural-primary border-transparent'
@@ -409,7 +423,7 @@ export default function App() {
             <button 
               type="button"
               onClick={() => setActiveTab('checklist')}
-              className={`px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 border ${
+              className={`px-3 md:px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 md:gap-2 border ${
                 activeTab === 'checklist'
                   ? 'bg-natural-primary/10 text-natural-primary border-natural-primary/20'
                   : 'text-natural-secondary hover:bg-natural-bg hover:text-natural-primary border-transparent'
@@ -508,6 +522,8 @@ export default function App() {
 
         {/* Render Active Tab Content */}
         {activeTab === 'guide' && <GuiaDocenteTab />}
+        
+        {activeTab === 'library' && <BibliotecaTab />}
         
         {activeTab === 'categories' && <CategoriasTab />}
         
